@@ -141,9 +141,9 @@ class CarInterface():
       # Kp and Ki for the longitudinal control
       if teslaModel == "SP":
         ret.longitudinalTuning.kpBP = [0., 5., 22., 35.] # 0km/h, 18 km/h, 80, 128km/h
-        ret.longitudinalTuning.kpV = [0.3, 0.3, 0.33, 0.34]
+        ret.longitudinalTuning.kpV = [0.3, 0.3, 0.31, 0.32]
         ret.longitudinalTuning.kiBP = [0., 5., 22., 35.]
-        ret.longitudinalTuning.kiV = [0.07, 0.07, 0.083, 0.087]
+        ret.longitudinalTuning.kiV = [0.07, 0.07, 0.075, 0.077]
       #elif teslaModel == "SD":
         # TODO
       #elif teslaModel == "SPD":
@@ -188,7 +188,7 @@ class CarInterface():
     ret.steerMaxV = [420.,420.]   # max steer allowed
 
     ret.gasMaxBP = [0., 55.]  # m/s
-    ret.gasMaxV = [0.3, 0.6] #if ret.enableGasInterceptor else [0.] # max gas allowed
+    ret.gasMaxV = [0.2, 0.5] #if ret.enableGasInterceptor else [0.] # max gas allowed
     ret.brakeMaxBP = [0.]  # m/s
     ret.brakeMaxV = [1.]   # max brake allowed - BB: since we are using regen, make this even
 
