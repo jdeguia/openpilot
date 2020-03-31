@@ -1,4 +1,4 @@
-Import('env')
+Import('env','is_tbp')
 
 def static_library(lib_dir, header_dir):
   env.Append(LIBPATH=[Dir(lib_dir)])
@@ -10,5 +10,6 @@ env.Append(CPPPATH=[Dir('json/src')])
 env.Library('json11', ['json11/json11.cpp'])
 env.Append(CPPPATH=[Dir('json11')])
 
-static_library('zmq/aarch64-linux/lib', 'zmq/aarch64-linux/include')
-static_library('capnp-cpp/aarch64-linux/lib', 'capnp-cpp/aarch64-linux/include')
+if not is_tbp:
+  static_library('zmq/aarch64-linux/lib', 'zmq/aarch64-linux/include')
+  static_library('capnp-cpp/aarch64-linux/lib', 'capnp-cpp/aarch64-linux/include')

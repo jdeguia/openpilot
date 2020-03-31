@@ -55,7 +55,7 @@ Depends('messaging/impl_zmq.cc', services_h)
 # note, this rebuilds the deps shared, zmq is statically linked to make APK happy
 # TODO: get APK to load system zmq to remove the static link
 if is_tbp:
-  shared_lib_shared_lib = [zmq, 'm', 'stdc++']
+  shared_lib_shared_lib = [zmq]
 else:
   shared_lib_shared_lib = [zmq, 'm', 'stdc++'] + ["gnustl_shared"] if arch == "aarch64" else [zmq]
   env.SharedLibrary('messaging_shared', messaging_objects, LIBS=shared_lib_shared_lib)

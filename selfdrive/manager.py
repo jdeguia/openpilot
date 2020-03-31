@@ -7,14 +7,11 @@ import errno
 import signal
 import shutil
 import subprocess
-import time
-from selfdrive.tinklad.tinkla_interface import TinklaClient
-from cereal import tinkla
-from selfdrive.car.tesla.readconfig import CarSettings
 import datetime
 
 from common.basedir import BASEDIR, PARAMS
 from common.android import ANDROID
+WEBCAM = os.getenv("WEBCAM") is not None
 sys.path.append(os.path.join(BASEDIR, "pyextra"))
 os.environ['BASEDIR'] = BASEDIR
 
@@ -115,7 +112,7 @@ if not prebuilt:
         for i in range(3,-1,-1):
           print("....%d" % i)
           time.sleep(1)
-        subprocess.check_call(["scons", "-c"], cwd=BASEDIR, env=env)
+        #subprocess.check_call(["scons", "-c"], cwd=BASEDIR, env=env)
         shutil.rmtree("/tmp/scons_cache")
       else:
         raise RuntimeError("scons build failed")
@@ -140,7 +137,6 @@ ThermalStatus = cereal.log.ThermalData.ThermalStatus
 
 # comment out anything you don't want to run
 managed_processes = {
-  "tinklad":  "selfdrive.tinklad.tinklad",
   "thermald": "selfdrive.thermald.thermald",
   "uploader": "selfdrive.loggerd.uploader",
   "deleter": "selfdrive.loggerd.deleter",
@@ -190,12 +186,12 @@ kill_processes = ['sensord', 'paramsd']
 green_temp_processes = ['uploader']
 
 persistent_processes = [
-  'tinklad',
   'thermald',
   'logmessaged',
   'ui',
   'uploader',
 ]
+
 if ANDROID:
   persistent_processes += [
     'logcatd',
@@ -217,6 +213,12 @@ car_started_processes = [
   'ubloxd',
   'locationd',
 ]
+
+if WEBCAM:
+  car_started_processes += [
+    'dmonitoringmodeld',
+  ]
+
 if ANDROID:
   car_started_processes += [
     'sensord',
@@ -359,13 +361,15 @@ def manager_init(should_register=True):
   if should_register:
     reg_res = register()
     if reg_res:
-      dongle_id, dongle_secret = reg_res
+      dongle_id = reg_res
     else:
       raise Exception("server registration failed")
   else:
     dongle_id = "c"*16
 
   # set dongle id
+  #BB
+  dongle_id="nada"
   cloudlog.info("dongle id is " + dongle_id)
   os.environ['DONGLE_ID'] = dongle_id
 
@@ -388,32 +392,6 @@ def manager_init(should_register=True):
     os.chmod(BASEDIR, 0o755)
     os.chmod(os.path.join(BASEDIR, "cereal"), 0o755)
     os.chmod(os.path.join(BASEDIR, "cereal", "libmessaging_shared.so"), 0o755)
-
-def system(cmd):
-  try:
-    cloudlog.info("running %s" % cmd)
-    subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
-  except subprocess.CalledProcessError as e:
-    cloudlog.event("running failed",
-      cmd=e.cmd,
-      output=e.output[-1024:],
-      returncode=e.returncode)
-
-def sendUserInfoToTinkla(params, tinklaClient):
-  carSettings = CarSettings()
-  gitRemote = params.get("GitRemote")
-  gitBranch = params.get("GitBranch")
-  gitHash = params.get("GitCommit")
-  dongleId = params.get("DongleId")
-  userHandle = carSettings.userHandle
-  info = tinkla.Interface.UserInfo.new_message(
-      openPilotId=dongleId,
-      userHandle=userHandle,
-      gitRemote=gitRemote,
-      gitBranch=gitBranch,
-      gitHash=gitHash
-  )
-  tinklaClient.setUserInfo(info)
 
 def manager_thread():
   # now loop
@@ -452,10 +430,6 @@ def manager_thread():
 
   logger_dead = False
 
-  # Tinkla interface
-  last_tinklad_send_attempt_time = 0
-  tinklaClient = TinklaClient()
-  sendUserInfoToTinkla(params=params, tinklaClient=tinklaClient)
   start_t = time.time()
   first_proc = None
 
@@ -471,13 +445,6 @@ def manager_thread():
       for p in green_temp_processes:
         if p in persistent_processes:
           start_managed_process(p)
-
-    # Attempt to send pending messages if there's any that queued while offline
-    # Seems this loop runs every second or so, throttle to once every 30s
-    now = time.time()
-    if now - last_tinklad_send_attempt_time >= 30:
-      tinklaClient.attemptToSendPendingMessages()
-      last_tinklad_send_attempt_time = now
 
     if msg.thermal.freeSpace < 0.05:
       logger_dead = True
@@ -495,7 +462,7 @@ def manager_thread():
 
     # check the status of all processes, did any of them die?
     running_list = ["%s%s\u001b[0m" % ("\u001b[32m" if running[p].is_alive() else "\u001b[31m", p) for p in running]
-    #cloudlog.debug(' '.join(running_list))
+    cloudlog.debug(' '.join(running_list))
 
     # Exit main loop when uninstall is needed
     if params.get("DoUninstall", encoding='utf8') == "1":
@@ -510,15 +477,12 @@ def manager_thread():
 
       # Get last sample and exit
       if dt > 90:
-        first_proc = first_proc
         last_proc = messaging.recv_sock(proc_sock, wait=True)
 
         cleanup_all_processes(None, None)
         sys.exit(print_cpu_usage(first_proc, last_proc))
 
 def manager_prepare(spinner=None):
-
-  carSettings = CarSettings()
   # build all processes
   os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -527,8 +491,7 @@ def manager_prepare(spinner=None):
 
   for i, p in enumerate(managed_processes):
     if spinner is not None:
-      spinText = carSettings.spinnerText
-      spinner.update(spinText % ((100.0 - total) + total * (i + 1) / len(managed_processes),))
+      spinner.update("%d" % ((100.0 - total) + total * (i + 1) / len(managed_processes),))
     prepare_managed_process(p)
 
 def uninstall():
@@ -564,7 +527,7 @@ def main():
     ("LongitudinalControl", "0"),
     ("LimitSetSpeed", "0"),
     ("LimitSetSpeedNeural", "0"),
-    ("LastUpdateTime", datetime.datetime.now().isoformat().encode('utf8')),
+    ("LastUpdateTime", datetime.datetime.utcnow().isoformat().encode('utf8')),
     ("OpenpilotEnabledToggle", "1"),
     ("LaneChangeEnabled", "1"),
   ]
@@ -600,7 +563,6 @@ def main():
   except Exception:
     traceback.print_exc()
     crash.capture_exception()
-    print ("EXIT ON EXCEPTION")
   finally:
     cleanup_all_processes(None, None)
 
