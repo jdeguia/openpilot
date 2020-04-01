@@ -54,23 +54,20 @@ if arch == "aarch64":
     cxxflags = ["-mcpu=cortex-a57"]
     cpppath = [
       "/usr/include",
-      #"#phonelibs/opencl/include",
+      "/usr/include/opencv4",
       "/data/op_rk3399_setup/support_files/include",
-      "/data/op_rk3399_setup/external/snpe/include",
       "/usr/include/aarch64-linux-gnu",
-      #"/usr/local/include",
-      #"/usr/rk3399-libs/include",
+      "/usr/local/include",
     ]
     libpath = [
       "/usr/lib",
       "/data/op_rk3399_setup/external/snpe/lib/lib",
       "/usr/lib/aarch64-linux-gnu",
-      #"/usr/local/lib",
+      "/usr/local/lib",
       "/data/data/com.termux/files/usr/lib",
       "/system/comma/usr/lib",
       "#phonelibs/nanovg",
       "/data/op_rk3399_setup/support_files/lib",
-      #"/usr/rk3399-libs/lib64",
     ]
     rpath = ["/system/vendor/lib64",
       "/usr/lib",
@@ -79,9 +76,8 @@ if arch == "aarch64":
       "external/tensorflow/lib",
       "cereal",
       "/usr/lib/aarch64-linux-gnu",
-      #"/usr/local/lib",
+      "/usr/local/lib",
       "selfdrive/common",
-      #"/usr/rk3399-libs/lib64",
     ] 
   else:
     cflags = ["-DQCOM", "-mcpu=cortex-a57"]
