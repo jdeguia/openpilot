@@ -14,6 +14,9 @@ extern "C" {
 #endif
 
 #define OUTPUT_SIZE 33
+#ifdef USE_TF_MODEL 
+#define USE_DSP_RUNTIME 2
+#endif
 
 typedef struct DMonitoringResult {
   float face_orientation[3];
