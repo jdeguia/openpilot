@@ -892,7 +892,7 @@ void cl_init(VisionState *s) {
   cl_uint num_platforms;
 
   err = clGetPlatformIDs(1, &platform_id, &num_platforms);
-  assert(err == 0);
+  //assert(err == 0);
   err = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_DEFAULT, 1,
                        &s->device_id, &num_devices);
   assert(err == 0);
