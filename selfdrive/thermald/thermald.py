@@ -3,6 +3,8 @@ import os
 import json
 import copy
 import datetime
+from backports.datetime_fromisoformat import MonkeyPatch
+MonkeyPatch.patch_fromisoformat()
 import psutil
 from smbus2 import SMBus
 from cereal import log

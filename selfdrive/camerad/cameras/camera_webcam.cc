@@ -53,7 +53,7 @@ static void* rear_thread(void *arg) {
   set_thread_name("webcam_rear_thread");
   CameraState* s = (CameraState*)arg;
 
-  cv::VideoCapture cap_rear(10); // road
+  cv::VideoCapture cap_rear(0); // road
   cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 853);
   cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   cap_rear.set(cv::CAP_PROP_FPS, s->fps);
@@ -129,7 +129,7 @@ static void* rear_thread(void *arg) {
 void front_thread(CameraState *s) {
   int err;
 
-  cv::VideoCapture cap_front(10); // driver
+  cv::VideoCapture cap_front(1); // driver
   cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 853);
   cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   cap_front.set(cv::CAP_PROP_FPS, s->fps);
