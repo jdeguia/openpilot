@@ -23,6 +23,10 @@
   #define TEMPORAL_SIZE 0
 #endif
 
+#ifdef USE_TF_MODEL
+# define USE_GPU_RUNTIME 1
+#endif
+
 // #define DUMP_YUV
 
 Eigen::Matrix<float, MODEL_PATH_DISTANCE, POLYFIT_DEGREE - 1> vander;
