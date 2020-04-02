@@ -53,7 +53,7 @@ static void* rear_thread(void *arg) {
   set_thread_name("webcam_rear_thread");
   CameraState* s = (CameraState*)arg;
 
-  cv::VideoCapture cap_rear(0); // road
+  cv::VideoCapture cap_rear(1); // road
   cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 853);
   cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   cap_rear.set(cv::CAP_PROP_FPS, s->fps);
@@ -129,7 +129,7 @@ static void* rear_thread(void *arg) {
 void front_thread(CameraState *s) {
   int err;
 
-  cv::VideoCapture cap_front(1); // driver
+  cv::VideoCapture cap_front(2); // driver
   cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 853);
   cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   cap_front.set(cv::CAP_PROP_FPS, s->fps);
@@ -231,7 +231,7 @@ void cameras_init(DualCameraState *s) {
     0.0, 0.0, 1.0,
   }};
 
-  camera_init(&s->front, CAMERA_ID_LGC615, 11);
+  camera_init(&s->front, CAMERA_ID_LGC615, 10);
   s->front.transform = (mat3){{
     1.0, 0.0, 0.0,
     0.0, 1.0, 0.0,

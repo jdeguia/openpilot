@@ -2,9 +2,9 @@
 #define RUN_H
 
 #include "runmodel.h"
+#include "snpemodel.h"
 
 #ifdef QCOM
-  #include "snpemodel.h"
   #define DefaultRunModel SNPEModel
 #else
   #ifdef USE_TF_MODEL
