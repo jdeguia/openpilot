@@ -129,7 +129,7 @@ static void* rear_thread(void *arg) {
 void front_thread(CameraState *s) {
   int err;
 
-  cv::VideoCapture cap_front(2); // driver
+  cv::VideoCapture cap_front(0); // driver
   cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 853);
   cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   cap_front.set(cv::CAP_PROP_FPS, s->fps);
