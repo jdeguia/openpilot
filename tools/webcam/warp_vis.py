@@ -5,7 +5,7 @@ import numpy as np
 eon_focal_length = 910.0 # pixels
 eon_dcam_focal_length = 860.0 # pixels
 
-webcam_focal_length = -908.0/1.5 # pixels
+webcam_focal_length = 908.0 # pixels
 
 eon_intrinsics = np.array([
   [eon_focal_length,   0.,   1164/2.],
@@ -18,8 +18,8 @@ eon_dcam_intrinsics = np.array([
   [  0,    0,     1]])
 
 webcam_intrinsics = np.array([
-  [webcam_focal_length,   0.,   1280/2/1.5],
-  [  0.,  webcam_focal_length,  720/2/1.5],
+  [webcam_focal_length,   0.,   1280/2],
+  [  0.,  webcam_focal_length,  720/2],
   [  0.,    0.,     1.]])
 
 if __name__ == "__main__":
@@ -29,9 +29,9 @@ if __name__ == "__main__":
   print("trans_webcam_to_eon_rear:\n", trans_webcam_to_eon_rear)
   print("trans_webcam_to_eon_front:\n", trans_webcam_to_eon_front)
 
-  cap = cv2.VideoCapture(10)
-  cap.set(cv2.CAP_PROP_FRAME_WIDTH, 853)
-  cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+  cap = cv2.VideoCapture(0)
+  cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+  cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
   while (True):
     ret, img = cap.read()

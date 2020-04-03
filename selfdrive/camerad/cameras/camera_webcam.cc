@@ -54,9 +54,9 @@ static void* rear_thread(void *arg) {
   CameraState* s = (CameraState*)arg;
 
   cv::VideoCapture cap_rear(1); // road
-  cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 853);
-  cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-  cap_rear.set(cv::CAP_PROP_FPS, s->fps);
+  cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+  cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+  //cap_rear.set(cv::CAP_PROP_FPS, s->fps);
   cap_rear.set(cv::CAP_PROP_AUTOFOCUS, 0); // off
   cap_rear.set(cv::CAP_PROP_FOCUS, 0); // 0 - 255?
   // cv::Rect roi_rear(160, 0, 960, 720);
@@ -66,9 +66,13 @@ static void* rear_thread(void *arg) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.50330396, 0.0, -59.40969163,
-                  0.0, 1.50330396, 76.20704846,
+  float ts[9] = {1.00220264, 0.0, -59.40969163,
+                  0.0, 1.00220264, 76.20704846,
                   0.0, 0.0, 1.0};
+  //BB for C910
+  //[[  1.50330396   0.         -59.40969163]
+  //[  0.           1.50330396  76.20704846]
+  //[  0.           0.           1.        ]]
   // if camera upside down:
   // float ts[9] = {-1.50330396, 0.0, 1223.4,
   //                 0.0, -1.50330396, 797.8,
@@ -90,9 +94,11 @@ static void* rear_thread(void *arg) {
 
     // int rows = frame_mat.rows;
     // int cols = frame_mat.cols;
-    // printf("Raw Rear, R=%d, C=%d\n", rows, cols);
+    //printf("Raw Rear, R=%d, C=%d\n", rows, cols);
 
-    cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    if (frame_mat.total() > 0) {
+      cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    
 
     int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
@@ -118,6 +124,7 @@ static void* rear_thread(void *arg) {
     tbuffer_dispatch(tb, buf_idx);
 
     frame_id += 1;
+    }
     frame_mat.release();
     transformed_mat.release();
   }
@@ -130,9 +137,9 @@ void front_thread(CameraState *s) {
   int err;
 
   cv::VideoCapture cap_front(0); // driver
-  cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 853);
-  cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-  cap_front.set(cv::CAP_PROP_FPS, s->fps);
+  cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+  cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+  //cap_front.set(cv::CAP_PROP_FPS, s->fps);
   // cv::Rect roi_front(320, 0, 960, 720);
 
   cv::Size size;
@@ -140,8 +147,8 @@ void front_thread(CameraState *s) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.42070485, 0.0, -30.16740088,
-                  0.0, 1.42070485, 91.030837,
+  float ts[9] = {0.94713656, 0.0, -30.16740088,
+                  0.0, 0.94713656, 91.030837,
                   0.0, 0.0, 1.0};
   // if camera upside down:
   // float ts[9] = {-1.42070485, 0.0, 1182.2,
@@ -162,11 +169,12 @@ void front_thread(CameraState *s) {
 
     cap_front >> frame_mat;
 
-    // int rows = frame_mat.rows;
-    // int cols = frame_mat.cols;
-    // printf("Raw Front, R=%d, C=%d\n", rows, cols);
-
-    cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    //int rows = frame_mat.rows;
+    //int cols = frame_mat.cols;
+    //printf("Raw Front, R=%d, C=%d\n", rows, cols);
+    if (frame_mat.total() > 0) {
+      cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    
 
     int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
@@ -192,6 +200,7 @@ void front_thread(CameraState *s) {
     tbuffer_dispatch(tb, buf_idx);
 
     frame_id += 1;
+    }
     frame_mat.release();
     transformed_mat.release();
   }
@@ -231,7 +240,7 @@ void cameras_init(DualCameraState *s) {
     0.0, 0.0, 1.0,
   }};
 
-  camera_init(&s->front, CAMERA_ID_LGC615, 10);
+  camera_init(&s->front, CAMERA_ID_LGC615, 11);
   s->front.transform = (mat3){{
     1.0, 0.0, 0.0,
     0.0, 1.0, 0.0,
