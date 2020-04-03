@@ -35,6 +35,12 @@ void camera_close(CameraState *s) {
 void camera_release_buffer(void *cookie, int buf_idx) {
   CameraState *s = static_cast<CameraState *>(cookie);
 }
+//! video/x-raw,width=%d,height=%d,framerate=%d/1,format=BGR ! videoscale ! videoconvert !
+void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
+  std::string  strm_template="v4l2src device=/dev/video%d  ! image/jpeg,width=%d,height=%d,framerate=%d/1,format=MJPEG ! appsink sync=true";  
+  * strm_def = (char*)calloc(300,1);
+  sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps);
+}
 
 void camera_init(CameraState *s, int camera_id, unsigned int fps) {
   assert(camera_id < ARRAYSIZE(cameras_supported));
@@ -49,16 +55,18 @@ void camera_init(CameraState *s, int camera_id, unsigned int fps) {
 
 static void* rear_thread(void *arg) {
   int err;
-
+  
   set_thread_name("webcam_rear_thread");
   CameraState* s = (CameraState*)arg;
-
-  cv::VideoCapture cap_rear(1); // road
-  cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-  cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+  char * strm_def;
+  open_gl_stream_def(s,1, 1280, 720, &strm_def);
+  cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
+  free(strm_def);
+  //cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+  //cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
   //cap_rear.set(cv::CAP_PROP_FPS, s->fps);
-  cap_rear.set(cv::CAP_PROP_AUTOFOCUS, 0); // off
-  cap_rear.set(cv::CAP_PROP_FOCUS, 0); // 0 - 255?
+  //cap_rear.set(cv::CAP_PROP_AUTOFOCUS, 0); // off
+  //cap_rear.set(cv::CAP_PROP_FOCUS, 0); // 0 - 255?
   // cv::Rect roi_rear(160, 0, 960, 720);
 
   cv::Size size;
@@ -66,8 +74,8 @@ static void* rear_thread(void *arg) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.00220264, 0.0, -59.40969163,
-                  0.0, 1.00220264, 76.20704846,
+  float ts[9] = {1.00220264, 0.0, -118.81938326,
+                  0.0, 1.00220264, 152.41409692,
                   0.0, 0.0, 1.0};
   //BB for C910
   //[[  1.50330396   0.         -59.40969163]
@@ -124,6 +132,7 @@ static void* rear_thread(void *arg) {
     tbuffer_dispatch(tb, buf_idx);
 
     frame_id += 1;
+  
     }
     frame_mat.release();
     transformed_mat.release();
@@ -136,9 +145,13 @@ static void* rear_thread(void *arg) {
 void front_thread(CameraState *s) {
   int err;
 
-  cv::VideoCapture cap_front(0); // driver
-  cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-  cap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+  //cv::VideoCapture cap_front(0); // driver
+  char * strm_def;
+  open_gl_stream_def(s,0,640,480, &strm_def);
+  cv::VideoCapture cap_front(strm_def,cv::CAP_GSTREAMER);  // driver
+  free(strm_def);
+  //cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+  //scap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
   //cap_front.set(cv::CAP_PROP_FPS, s->fps);
   // cv::Rect roi_front(320, 0, 960, 720);
 
@@ -147,8 +160,8 @@ void front_thread(CameraState *s) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {0.94713656, 0.0, -30.16740088,
-                  0.0, 0.94713656, 91.030837,
+  float ts[9] = {1.89427313, 0.0, -60.33480176,
+                  0.0, 1.89427313, -45.25110132,
                   0.0, 0.0, 1.0};
   // if camera upside down:
   // float ts[9] = {-1.42070485, 0.0, 1182.2,
@@ -171,7 +184,7 @@ void front_thread(CameraState *s) {
 
     //int rows = frame_mat.rows;
     //int cols = frame_mat.cols;
-    //printf("Raw Front, R=%d, C=%d\n", rows, cols);
+    //printf("Raw Front, R=%d, C=%d\n", rowss, cols);
     if (frame_mat.total() > 0) {
       cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
     
@@ -240,7 +253,7 @@ void cameras_init(DualCameraState *s) {
     0.0, 0.0, 1.0,
   }};
 
-  camera_init(&s->front, CAMERA_ID_LGC615, 11);
+  camera_init(&s->front, CAMERA_ID_LGC615, 10);
   s->front.transform = (mat3){{
     1.0, 0.0, 0.0,
     0.0, 1.0, 0.0,
