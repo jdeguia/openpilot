@@ -56,11 +56,11 @@ void camera_init(CameraState *s, int camera_id, unsigned int fps) {
 
 static void* rear_thread(void *arg) {
   int err;
-  
+  s
   set_thread_name("webcam_rear_thread");
   CameraState* s = (CameraState*)arg;
   char * strm_def;
-  open_gl_stream_def(s,1, 1280, 720, &strm_def);
+  open_gl_stream_def(s,1, 800, 600, &strm_def);
   cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
   free(strm_def);
   //cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
@@ -75,8 +75,8 @@ static void* rear_thread(void *arg) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.8, 0.0, 0.0,
-                  0.0, 1.8, 0.0,
+  float ts[9] = {1.454, 0.0, 0.0,
+                  0.0, 1.455, 0.0,
                   0.0, 0.0, 1.0};
   //BB for C910
   //[[  1.50330396   0.         -59.40969163]
