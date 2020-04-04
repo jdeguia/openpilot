@@ -38,7 +38,7 @@ void camera_release_buffer(void *cookie, int buf_idx) {
 //! video/x-raw,width=%d,height=%d,framerate=%d/1,format=BGR ! videoscale ! videoconvert !
 void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
   printf("OPENGLSTREAM");
-  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=2 ! x-raw/video ,width=%d,height=%d,framerate=%d/1,format=(string)GRAY ! appsink ";  
+  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=1 ! x-raw/video ,width=%d,height=%d,framerate=%d/1,format=(string)RGB24 ! appsink ";  
   * strm_def = (char*)calloc(300,1);
   sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps);
   printf(" GL Stream :[%s]\n",*strm_def);
@@ -62,8 +62,9 @@ static void* rear_thread(void *arg) {
   char * strm_def;
   printf("open_GL");
   open_gl_stream_def(s,1, 800, 600, &strm_def);
-  cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
+  //cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
   free(strm_def);
+   cv::VideoCapture cap_rear(1); 
   //cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
   //cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
   //cap_rear.set(cv::CAP_PROP_FPS, s->fps);
@@ -145,11 +146,11 @@ static void* rear_thread(void *arg) {
 
 void front_thread(CameraState *s) {
   int err;
-  //cv::VideoCapture cap_front(0); // driver
+  cv::VideoCapture cap_front(0); // driver
   printf("OPEN FRONT");
   char * strm_def;
   open_gl_stream_def(s,0,640,480, &strm_def);
-  cv::VideoCapture cap_front(strm_def,cv::CAP_GSTREAMER);  // driver
+  //cv::VideoCapture cap_front(strm_def,cv::CAP_GSTREAMER);  // driver
   free(strm_def);
   //cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
   //scap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 720);

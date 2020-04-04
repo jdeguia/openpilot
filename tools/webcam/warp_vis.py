@@ -10,7 +10,7 @@ eon_dcam_focal_length = 860.0 # pixels
 ###############################################
 want_width = 800
 want_height = 600
-want_fps = 2
+want_fps = 30
 is_front_cam = False
 want_hdw_change = 0
 ###############################################

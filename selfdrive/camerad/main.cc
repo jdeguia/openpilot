@@ -910,7 +910,7 @@ void cl_init(VisionState *s) {
                        &s->device_id, &num_devices);
   assert(err == 0);
 
-  cl_print_info(platform_id, s->device_id);
+  //cl_print_info(platform_id, s->device_id);
   printf("\n");
 
   s->context = clCreateContext(NULL, 1, &s->device_id, NULL, NULL, &err);
@@ -953,7 +953,6 @@ void init_buffers(VisionState *s) {
     s->rgb_width = s->frame_width;
     s->rgb_height = s->frame_height;
   }
-
   for (int i=0; i<UI_BUF_COUNT; i++) {
     VisionImg img = visionimg_alloc_rgb24(s->rgb_width, s->rgb_height, &s->rgb_bufs[i]);
     s->rgb_bufs_cl[i] = visionbuf_to_cl(&s->rgb_bufs[i], s->device_id, s->context);
@@ -972,7 +971,6 @@ void init_buffers(VisionState *s) {
     s->rgb_front_width = s->cameras.front.ci.frame_width;
     s->rgb_front_height = s->cameras.front.ci.frame_height;
   }
-  
 
   for (int i=0; i<UI_BUF_COUNT; i++) {
     VisionImg img = visionimg_alloc_rgb24(s->rgb_front_width, s->rgb_front_height, &s->rgb_front_bufs[i]);
@@ -991,7 +989,6 @@ void init_buffers(VisionState *s) {
   s->yuv_width = s->rgb_width;
   s->yuv_height = s->rgb_height;
   s->yuv_buf_size = s->rgb_width * s->rgb_height * 3 / 2;
-
   for (int i=0; i<YUV_COUNT; i++) {
     s->yuv_ion[i] = visionbuf_allocate_cl(s->yuv_buf_size, s->device_id, s->context, &s->yuv_cl[i]);
     s->yuv_bufs[i].y = (uint8_t*)s->yuv_ion[i].addr;
@@ -1039,7 +1036,6 @@ void init_buffers(VisionState *s) {
     s->krnl_debayer_front = clCreateKernel(s->prg_debayer_front, "debayer10", &err);
     assert(err == 0);
   }
-
   rgb_to_yuv_init(&s->rgb_to_yuv_state, s->context, s->device_id, s->yuv_width, s->yuv_height, s->rgb_stride);
   rgb_to_yuv_init(&s->front_rgb_to_yuv_state, s->context, s->device_id, s->yuv_front_width, s->yuv_front_height, s->rgb_front_stride);
 }
