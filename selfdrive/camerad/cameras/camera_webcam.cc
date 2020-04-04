@@ -37,9 +37,10 @@ void camera_release_buffer(void *cookie, int buf_idx) {
 }
 //! video/x-raw,width=%d,height=%d,framerate=%d/1,format=BGR ! videoscale ! videoconvert !
 void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
-  std::string  strm_template="v4l2src device=/dev/video%d  ! image/jpeg,width=%d,height=%d,framerate=%d/1,format=MJPEG ! appsink sync=true";  
+  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=2 ! image/jpeg,width=%d,height=%d,framerate=%d/1,format=MJPEG ! appsink ";  
   * strm_def = (char*)calloc(300,1);
   sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps);
+  printf(" GL Stream :[%s]\n",*strm_def);
 }
 
 void camera_init(CameraState *s, int camera_id, unsigned int fps) {
@@ -74,8 +75,8 @@ static void* rear_thread(void *arg) {
   size.width = s->ci.frame_width;
 
   // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.00220264, 0.0, -118.81938326,
-                  0.0, 1.00220264, 152.41409692,
+  float ts[9] = {1.8, 0.0, 0.0,
+                  0.0, 1.8, 0.0,
                   0.0, 0.0, 1.0};
   //BB for C910
   //[[  1.50330396   0.         -59.40969163]
@@ -104,34 +105,34 @@ static void* rear_thread(void *arg) {
     // int cols = frame_mat.cols;
     //printf("Raw Rear, R=%d, C=%d\n", rows, cols);
 
-    if (frame_mat.total() > 0) {
+    if ((frame_mat.total() > 0) ){
       cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
     
 
-    int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
+      int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
-    const int buf_idx = tbuffer_select(tb);
-    s->camera_bufs_metadata[buf_idx] = {
-      .frame_id = frame_id,
-    };
+      const int buf_idx = tbuffer_select(tb);
+      s->camera_bufs_metadata[buf_idx] = {
+        .frame_id = frame_id,
+      };
 
-    cl_command_queue q = s->camera_bufs[buf_idx].copy_q;
-    cl_mem yuv_cl = s->camera_bufs[buf_idx].buf_cl;
-    cl_event map_event;
-    void *yuv_buf = (void *)clEnqueueMapBuffer(q, yuv_cl, CL_TRUE,
-                                                CL_MAP_WRITE, 0, transformed_size,
-                                                0, NULL, &map_event, &err);
-    assert(err == 0);
-    clWaitForEvents(1, &map_event);
-    clReleaseEvent(map_event);
-    memcpy(yuv_buf, transformed_mat.data, transformed_size);
+      cl_command_queue q = s->camera_bufs[buf_idx].copy_q;
+      cl_mem yuv_cl = s->camera_bufs[buf_idx].buf_cl;
+      cl_event map_event;
+      void *yuv_buf = (void *)clEnqueueMapBuffer(q, yuv_cl, CL_TRUE,
+                                                  CL_MAP_WRITE, 0, transformed_size,
+                                                  0, NULL, &map_event, &err);
+      assert(err == 0);
+      clWaitForEvents(1, &map_event);
+      clReleaseEvent(map_event);
+      memcpy(yuv_buf, transformed_mat.data, transformed_size);
 
-    clEnqueueUnmapMemObject(q, yuv_cl, yuv_buf, 0, NULL, &map_event);
-    clWaitForEvents(1, &map_event);
-    clReleaseEvent(map_event);
-    tbuffer_dispatch(tb, buf_idx);
+      clEnqueueUnmapMemObject(q, yuv_cl, yuv_buf, 0, NULL, &map_event);
+      clWaitForEvents(1, &map_event);
+      clReleaseEvent(map_event);
+      tbuffer_dispatch(tb, buf_idx);
 
-    frame_id += 1;
+      frame_id += 1;
   
     }
     frame_mat.release();
@@ -185,34 +186,34 @@ void front_thread(CameraState *s) {
     //int rows = frame_mat.rows;
     //int cols = frame_mat.cols;
     //printf("Raw Front, R=%d, C=%d\n", rowss, cols);
-    if (frame_mat.total() > 0) {
+    if ((frame_mat.total() > 0)){
       cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
     
 
-    int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
+      int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
-    const int buf_idx = tbuffer_select(tb);
-    s->camera_bufs_metadata[buf_idx] = {
-      .frame_id = frame_id,
-    };
+      const int buf_idx = tbuffer_select(tb);
+      s->camera_bufs_metadata[buf_idx] = {
+        .frame_id = frame_id,
+      };
 
-    cl_command_queue q = s->camera_bufs[buf_idx].copy_q;
-    cl_mem yuv_cl = s->camera_bufs[buf_idx].buf_cl;
-    cl_event map_event;
-    void *yuv_buf = (void *)clEnqueueMapBuffer(q, yuv_cl, CL_TRUE,
-                                                CL_MAP_WRITE, 0, transformed_size,
-                                                0, NULL, &map_event, &err);
-    assert(err == 0);
-    clWaitForEvents(1, &map_event);
-    clReleaseEvent(map_event);
-    memcpy(yuv_buf, transformed_mat.data, transformed_size);
+      cl_command_queue q = s->camera_bufs[buf_idx].copy_q;
+      cl_mem yuv_cl = s->camera_bufs[buf_idx].buf_cl;
+      cl_event map_event;
+      void *yuv_buf = (void *)clEnqueueMapBuffer(q, yuv_cl, CL_TRUE,
+                                                  CL_MAP_WRITE, 0, transformed_size,
+                                                  0, NULL, &map_event, &err);
+      assert(err == 0);
+      clWaitForEvents(1, &map_event);
+      clReleaseEvent(map_event);
+      memcpy(yuv_buf, transformed_mat.data, transformed_size);
 
-    clEnqueueUnmapMemObject(q, yuv_cl, yuv_buf, 0, NULL, &map_event);
-    clWaitForEvents(1, &map_event);
-    clReleaseEvent(map_event);
-    tbuffer_dispatch(tb, buf_idx);
+      clEnqueueUnmapMemObject(q, yuv_cl, yuv_buf, 0, NULL, &map_event);
+      clWaitForEvents(1, &map_event);
+      clReleaseEvent(map_event);
+      tbuffer_dispatch(tb, buf_idx);
 
-    frame_id += 1;
+      frame_id += 1;
     }
     frame_mat.release();
     transformed_mat.release();
