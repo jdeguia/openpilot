@@ -1155,9 +1155,7 @@ int main(int argc, char *argv[]) {
   assert(s->front_frame_sock != NULL);
   assert(s->thumbnail_sock != NULL);
 #endif
-
   cameras_open(&s->cameras, &s->camera_bufs[0], &s->focus_bufs[0], &s->stats_bufs[0], &s->front_camera_bufs[0]);
-
   party(s);
 
 #if defined(QCOM) || defined(QCOM2)

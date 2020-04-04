@@ -16,14 +16,14 @@
 #include <opencv2/videoio.hpp>
 
 extern volatile sig_atomic_t do_exit;
-
 #define FRAME_WIDTH  1164
 #define FRAME_HEIGHT 874
 #define FRAME_WIDTH_FRONT  1152
 #define FRAME_HEIGHT_FRONT 864
-
 namespace {
+	
 void camera_open(CameraState *s, VisionBuf *camera_bufs, bool rear) {
+  printf("open cameras");
   assert(camera_bufs);
   s->camera_bufs = camera_bufs;
 }
@@ -37,29 +37,30 @@ void camera_release_buffer(void *cookie, int buf_idx) {
 }
 //! video/x-raw,width=%d,height=%d,framerate=%d/1,format=BGR ! videoscale ! videoconvert !
 void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
-  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=2 ! image/jpeg,width=%d,height=%d,framerate=%d/1,format=MJPEG ! appsink ";  
+  printf("OPENGLSTREAM");
+  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=2 ! x-raw/video ,width=%d,height=%d,framerate=%d/1,format=(string)GRAY ! appsink ";  
   * strm_def = (char*)calloc(300,1);
   sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps);
   printf(" GL Stream :[%s]\n",*strm_def);
 }
 
 void camera_init(CameraState *s, int camera_id, unsigned int fps) {
+  printf("\n\n\n Init Camera %d\n", camera_id);
   assert(camera_id < ARRAYSIZE(cameras_supported));
   s->ci = cameras_supported[camera_id];
   assert(s->ci.frame_width != 0);
-
+   
   s->frame_size = s->ci.frame_height * s->ci.frame_stride;
   s->fps = fps;
-
   tbuffer_init2(&s->camera_tb, FRAME_BUF_COUNT, "frame", camera_release_buffer, s);
 }
 
 static void* rear_thread(void *arg) {
   int err;
-  s
   set_thread_name("webcam_rear_thread");
   CameraState* s = (CameraState*)arg;
   char * strm_def;
+  printf("open_GL");
   open_gl_stream_def(s,1, 800, 600, &strm_def);
   cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
   free(strm_def);
@@ -73,7 +74,6 @@ static void* rear_thread(void *arg) {
   cv::Size size;
   size.height = s->ci.frame_height;
   size.width = s->ci.frame_width;
-
   // transforms calculation see tools/webcam/warp_vis.py
   float ts[9] = {1.454, 0.0, 0.0,
                   0.0, 1.455, 0.0,
@@ -101,9 +101,9 @@ static void* rear_thread(void *arg) {
 
     cap_rear >> frame_mat;
 
-    // int rows = frame_mat.rows;
-    // int cols = frame_mat.cols;
-    //printf("Raw Rear, R=%d, C=%d\n", rows, cols);
+     int rows = frame_mat.rows;
+     int cols = frame_mat.cols;
+    printf("Raw Rear, R=%d, C=%d\n", rows, cols);
 
     if ((frame_mat.total() > 0) ){
       cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
@@ -145,8 +145,8 @@ static void* rear_thread(void *arg) {
 
 void front_thread(CameraState *s) {
   int err;
-
   //cv::VideoCapture cap_front(0); // driver
+  printf("OPEN FRONT");
   char * strm_def;
   open_gl_stream_def(s,0,640,480, &strm_def);
   cv::VideoCapture cap_front(strm_def,cv::CAP_GSTREAMER);  // driver
@@ -253,7 +253,6 @@ void cameras_init(DualCameraState *s) {
     0.0, 1.0, 0.0,
     0.0, 0.0, 1.0,
   }};
-
   camera_init(&s->front, CAMERA_ID_LGC615, 10);
   s->front.transform = (mat3){{
     1.0, 0.0, 0.0,
@@ -271,10 +270,10 @@ void cameras_open(DualCameraState *s, VisionBuf *camera_bufs_rear,
   assert(camera_bufs_front);
   int err;
 
-  // LOG("*** open front ***");
+  printf("*** open front ***");
   camera_open(&s->front, camera_bufs_front, false);
 
-  // LOG("*** open rear ***");
+  printf("*** open rear ***");
   camera_open(&s->rear, camera_bufs_rear, true);
 }
 
@@ -285,13 +284,11 @@ void cameras_close(DualCameraState *s) {
 
 void cameras_run(DualCameraState *s) {
   set_thread_name("webcam_thread");
-
   int err;
   pthread_t rear_thread_handle;
   err = pthread_create(&rear_thread_handle, NULL,
                         rear_thread, &s->rear);
   assert(err == 0);
-
   front_thread(&s->front);
 
   err = pthread_join(rear_thread_handle, NULL);
