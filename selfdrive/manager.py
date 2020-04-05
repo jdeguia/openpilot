@@ -187,9 +187,9 @@ green_temp_processes = ['uploader']
 
 persistent_processes = [
   'thermald',
-  'logmessaged',
+  #'logmessaged',
   'ui',
-  'uploader',
+  #'uploader',
 ]
 
 if ANDROID:
@@ -202,14 +202,14 @@ if ANDROID:
 car_started_processes = [
   'controlsd',
   'plannerd',
-  'loggerd',
+  #'loggerd',
   'radard',
   'dmonitoringd',
   'calibrationd',
   'paramsd',
   'camerad',
   'modeld',
-  'proclogd',
+  #'proclogd',
   'ubloxd',
   'locationd',
 ]

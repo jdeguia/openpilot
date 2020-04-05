@@ -35,12 +35,18 @@ void camera_close(CameraState *s) {
 void camera_release_buffer(void *cookie, int buf_idx) {
   CameraState *s = static_cast<CameraState *>(cookie);
 }
-//v4l2src device=/dev/video1  ! video/x-raw,width=800,height=600,framerate=20/1 ! videoconvert ! "video/x-raw,format=RGB" ! videoscale ! "video/x-raw,width=,height=
+
+
 void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
   printf("OPENGLSTREAM");
-  std::string  strm_template="v4l2src device=/dev/video%d  ! video/x-raw,width=%d,height=%d,framerate=%d/1 ! videoconvert ! video/x-raw,format=I420 ! videoscale ! video/x-raw,width=%d,height=%d ! appsink ";  
+  std::string  strm_template="v4l2src device=/dev/video%d  ! video/x-raw,width=%d,height=%d,framerate=%d/1,format=YUY2 !"
+  	                     "nvvidconv ! video/x-raw(memory:NVMM),format=I420 !"
+  	                     "nvvidconv ! video/x-raw,format=BGRx !"
+  	                     "videoconvert ! video/x-raw,format=BGR !"
+			     "videoscale ! video/x-raw,width=%d,height=%d !"
+  			     " appsink ";  
   * strm_def = (char*)calloc(300,1);
-  sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps,s->ci.frame_width,s->ci.frame_height);
+  sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps, s->ci.frame_width, s->ci.frame_height);
   printf(" GL Stream :[%s]\n",*strm_def);
 }
 
@@ -68,34 +74,18 @@ static void* rear_thread(void *arg) {
   cv::Size size;
   size.height = s->ci.frame_height;
   size.width = s->ci.frame_width;
-  // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.454, 0.0, 0.0,
-                  0.0, 1.455, 0.0,
-                  0.0, 0.0, 1.0};
-  //BB for C910
-  //[[  1.50330396   0.         -59.40969163]
-  //[  0.           1.50330396  76.20704846]
-  //[  0.           0.           1.        ]]
-  // if camera upside down:
-  // float ts[9] = {-1.50330396, 0.0, 1223.4,
-  //                 0.0, -1.50330396, 797.8,
-  //                 0.0, 0.0, 1.0};
-  const cv::Mat transform = cv::Mat(3, 3, CV_32F, ts);
 
   if (!cap_rear.isOpened()) {
     err = 1;
   }
-
   uint32_t frame_id = 0;
   TBuffer* tb = &s->camera_tb;
-
+  cv::Mat transformed_mat;
   while (!do_exit) {
-    cv::Mat transformed_mat;
-    cap_rear >> transformed_mat;
-    if (transformed_mat.total() > 0) {
-     cv::Size tsize = transformed_mat.size(); 
-     printf("Raw Rear, W=%d, H=%d\n", tsize.width, tsize.height);
-
+    if (cap_rear.read(transformed_mat)) {
+     //cv::Size tsize = transformed_mat.size(); 
+     //printf("Raw Rear, W=%d, H=%d\n", tsize.width, tsize.height);
+      
      int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
       const int buf_idx = tbuffer_select(tb);
@@ -122,9 +112,8 @@ static void* rear_thread(void *arg) {
       frame_id += 1;
   
     }
-    transformed_mat.release();
   }
-
+  transformed_mat.release();
   cap_rear.release();
   return NULL;
 }
@@ -141,29 +130,18 @@ void front_thread(CameraState *s) {
   size.height = s->ci.frame_height;
   size.width = s->ci.frame_width;
 
-  // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.89427313, 0.0, -60.33480176,
-                  0.0, 1.89427313, -45.25110132,
-                  0.0, 0.0, 1.0};
-  // if camera upside down:
-  // float ts[9] = {-1.42070485, 0.0, 1182.2,
-  //                 0.0, -1.42070485, 773.0,
-  //                 0.0, 0.0, 1.0};
-  const cv::Mat transform = cv::Mat(3, 3, CV_32F, ts);
-
   if (!cap_front.isOpened()) {
     err = 1;
   }
 
   uint32_t frame_id = 0;
   TBuffer* tb = &s->camera_tb;
+  cv::Mat transformed_mat;
 
   while (!do_exit) {
-    cv::Mat transformed_mat;
-    cap_front >> transformed_mat;
-    if (transformed_mat.total()>0){
-      cv::Size tsize = transformed_mat.size(); 
-      printf("Raw Rear, W=%d, H=%d\n", tsize.width, tsize.height);
+    if(cap_front.read(transformed_mat)){
+      //cv::Size tsize = transformed_mat.size(); 
+      //printf("Raw Front, W=%d, H=%d\n", tsize.width, tsize.height);
     
 
       int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
@@ -191,9 +169,8 @@ void front_thread(CameraState *s) {
 
       frame_id += 1;
     }
-    transformed_mat.release();
   }
-
+  transformed_mat.release();
   cap_front.release();
   return;
 }
