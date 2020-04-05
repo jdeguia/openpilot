@@ -35,12 +35,12 @@ void camera_close(CameraState *s) {
 void camera_release_buffer(void *cookie, int buf_idx) {
   CameraState *s = static_cast<CameraState *>(cookie);
 }
-//! video/x-raw,width=%d,height=%d,framerate=%d/1,format=BGR ! videoscale ! videoconvert !
+//v4l2src device=/dev/video1  ! video/x-raw,width=800,height=600,framerate=20/1 ! videoconvert ! "video/x-raw,format=RGB" ! videoscale ! "video/x-raw,width=,height=
 void open_gl_stream_def(CameraState * s, int video_id, int width, int height, char ** strm_def) {
   printf("OPENGLSTREAM");
-  std::string  strm_template="v4l2src device=/dev/video%d  io-mode=1 ! x-raw/video ,width=%d,height=%d,framerate=%d/1,format=(string)RGB24 ! appsink ";  
+  std::string  strm_template="v4l2src device=/dev/video%d  ! video/x-raw,width=%d,height=%d,framerate=%d/1 ! videoconvert ! video/x-raw,format=I420 ! videoscale ! video/x-raw,width=%d,height=%d ! appsink ";  
   * strm_def = (char*)calloc(300,1);
-  sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps);
+  sprintf(*strm_def,strm_template.c_str(),video_id, width, height, s->fps,s->ci.frame_width,s->ci.frame_height);
   printf(" GL Stream :[%s]\n",*strm_def);
 }
 
@@ -62,15 +62,8 @@ static void* rear_thread(void *arg) {
   char * strm_def;
   printf("open_GL");
   open_gl_stream_def(s,1, 800, 600, &strm_def);
-  //cv::VideoCapture cap_rear(strm_def,cv::CAP_GSTREAMER);  // road
+  cv::VideoCapture cap_rear(strm_def);  // road
   free(strm_def);
-   cv::VideoCapture cap_rear(1); 
-  //cap_rear.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-  //cap_rear.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-  //cap_rear.set(cv::CAP_PROP_FPS, s->fps);
-  //cap_rear.set(cv::CAP_PROP_AUTOFOCUS, 0); // off
-  //cap_rear.set(cv::CAP_PROP_FOCUS, 0); // 0 - 255?
-  // cv::Rect roi_rear(160, 0, 960, 720);
 
   cv::Size size;
   size.height = s->ci.frame_height;
@@ -97,20 +90,13 @@ static void* rear_thread(void *arg) {
   TBuffer* tb = &s->camera_tb;
 
   while (!do_exit) {
-    cv::Mat frame_mat;
     cv::Mat transformed_mat;
+    cap_rear >> transformed_mat;
+    if (transformed_mat.total() > 0) {
+     cv::Size tsize = transformed_mat.size(); 
+     printf("Raw Rear, W=%d, H=%d\n", tsize.width, tsize.height);
 
-    cap_rear >> frame_mat;
-
-     int rows = frame_mat.rows;
-     int cols = frame_mat.cols;
-    printf("Raw Rear, R=%d, C=%d\n", rows, cols);
-
-    if ((frame_mat.total() > 0) ){
-      cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
-    
-
-      int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
+     int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
 
       const int buf_idx = tbuffer_select(tb);
       s->camera_bufs_metadata[buf_idx] = {
@@ -136,7 +122,6 @@ static void* rear_thread(void *arg) {
       frame_id += 1;
   
     }
-    frame_mat.release();
     transformed_mat.release();
   }
 
@@ -146,16 +131,11 @@ static void* rear_thread(void *arg) {
 
 void front_thread(CameraState *s) {
   int err;
-  cv::VideoCapture cap_front(0); // driver
   printf("OPEN FRONT");
   char * strm_def;
   open_gl_stream_def(s,0,640,480, &strm_def);
-  //cv::VideoCapture cap_front(strm_def,cv::CAP_GSTREAMER);  // driver
+  cv::VideoCapture cap_front(strm_def);  // driver
   free(strm_def);
-  //cap_front.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-  //scap_front.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-  //cap_front.set(cv::CAP_PROP_FPS, s->fps);
-  // cv::Rect roi_front(320, 0, 960, 720);
 
   cv::Size size;
   size.height = s->ci.frame_height;
@@ -179,16 +159,11 @@ void front_thread(CameraState *s) {
   TBuffer* tb = &s->camera_tb;
 
   while (!do_exit) {
-    cv::Mat frame_mat;
     cv::Mat transformed_mat;
-
-    cap_front >> frame_mat;
-
-    //int rows = frame_mat.rows;
-    //int cols = frame_mat.cols;
-    //printf("Raw Front, R=%d, C=%d\n", rowss, cols);
-    if ((frame_mat.total() > 0)){
-      cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    cap_front >> transformed_mat;
+    if (transformed_mat.total()>0){
+      cv::Size tsize = transformed_mat.size(); 
+      printf("Raw Rear, W=%d, H=%d\n", tsize.width, tsize.height);
     
 
       int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
@@ -216,7 +191,6 @@ void front_thread(CameraState *s) {
 
       frame_id += 1;
     }
-    frame_mat.release();
     transformed_mat.release();
   }
 
